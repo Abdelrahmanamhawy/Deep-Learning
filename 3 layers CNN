@@ -1,0 +1,139 @@
+#A 3 layers CNN created for a Kaggle competetion to detect Aerial Cactus flowers.
+
+
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
+import random
+from scipy import ndarray
+import skimage as sk
+from skimage import transform
+from skimage import util
+from PIL import Image
+from sklearn.model_selection import GridSearchCV
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.decomposition import KernelPCA
+from sklearn import svm
+from sklearn.svm import LinearSVC
+from sklearn.ensemble import RandomForestClassifier
+
+from sklearn.metrics import precision_score,recall_score
+from sklearn.model_selection import cross_val_predict
+from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import StandardScaler
+
+from sklearn import linear_model
+
+from sklearn.metrics import confusion_matrix
+from sklearn.ensemble import AdaBoostClassifier
+# Input data files are available in the "../input/" directory.
+import os
+print(os.listdir("../input"))
+
+import matplotlib.pyplot as plt
+import cv2
+['train', 'train.csv', 'sample_submission.csv', 'test']
+train_file_name_class= pd.read_csv("../input/train.csv", header=0)
+# print(train_file_name_class.head())
+train_file_names=train_file_name_class['id']
+trainY=train_file_name_class['has_cactus']
+trainX=[]
+for file_name in train_file_names.values:
+  img=cv2.imread('../input/train/train/'+file_name)
+  img = img.reshape(32*32*3,)
+  img=img/255
+  trainX.append(img)
+print(len(trainX))
+  
+
+#test_file_name_class= pd.read_csv("../input/test", header=0)
+submission=pd.read_csv("../input/sample_submission.csv")
+image_feature = []
+image_id=submission['id']
+for i in image_id:
+  img=cv2.imread('../input/test/test/'+i)
+  img = img.reshape(32*32*3,)
+  img=img/255
+  testX.append(img)
+
+
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+scaler= scaler.fit(trainX)
+trainX = scaler.transform(trainX)
+print(trainX.ndim)
+
+
+colors = (0,0,0)
+area = np.pi*3
+
+plt.scatter(trainX[:,0], trainY, s=area, c=colors, alpha=0.5)
+plt.title('Scatter plot')
+plt.xlabel('X')
+plt.ylabel('y')
+plt.show()
+
+#plt.plot(Final,y_train)
+#It's easy to see why a binary classifer would do just fine here ! 
+
+X_train, X_test, y_train, y_test = train_test_split(trainX, trainY, test_size=0.2, 
+                                                    random_state=123)
+# -*- coding:utf-8 -*-
+
+clf=Pipeline([
+   # ("kpca",KernelPCA(n_components=4,gamma=0.03,kernel="rbf")),
+    ("scaler", StandardScaler()),
+   # ("sgd", linear_model.SGDClassifier(max_iter=1000, tol=1e-3))
+    #("booster", AdaBoostClassifier(n_estimators=100, random_state=1))
+    #("forest",RandomForestClassifier(n_estimators=100,max_depth=4,min_samples_split=4,))
+   ("log_reg",LogisticRegression(C=1.0,solver="saga",penalty="elasticnet",l1_ratio=0))
+   # ('svm', svm.SVC(C=1.0,gamma=0.03,kernel="rbf"))
+])
+param_grid = [{             
+   "log_reg__C":np.linspace(1.0,2.0,3.0)
+}]
+#grid_search = GridSearchCV(clf, param_grid, cv=3) 
+#grid_search.fit(X_train, y_train)
+#print(.get_params().keys)
+clf.fit(X_train,y_train)
+
+
+y_pred=cross_val_predict(clf,X_train,y_train,cv=3)
+#precision_score(y_train,y_pred)
+#accuracy_score(y_train, y_pred, normalize=True)
+/opt/conda/lib/python3.6/site-packages/sklearn/linear_model/sag.py:337: ConvergenceWarning: The max_iter was reached which means the coef_ did not converge
+  "the coef_ did not converge", ConvergenceWarning)
+/opt/conda/lib/python3.6/site-packages/sklearn/linear_model/sag.py:337: ConvergenceWarning: The max_iter was reached which means the coef_ did not converge
+  "the coef_ did not converge", ConvergenceWarning)
+/opt/conda/lib/python3.6/site-packages/sklearn/linear_model/sag.py:337: ConvergenceWarning: The max_iter was reached which means the coef_ did not converge
+  "the coef_ did not converge", ConvergenceWarning)
+X_new =X_test[0:2]
+y_proba = log_clf.predict_proba(X_new) 
+plt.plot(X_new, y_proba[:, 1], "g-", label="Truth")
+#plt.plot(X_new, y_proba[:, 0], "b--", label="False")
+
+
+accuracy_score(y_train, y_pred, normalize=True)
+//0.8900714285714286
+conf_mx=confusion_matrix(y_train,y_pred)
+print(conf_mx)
+#plt.imshow(conf_mx,cmap=plt.cm.gray)
+row_sums = conf_mx.sum(axis=1, keepdims=True)
+norm_conf_mx = conf_mx / row_sums 
+np.fill_diagonal(norm_conf_mx, 0) 
+plt.matshow(norm_conf_mx, cmap=plt.cm.gray) 
+plt.show()
+
+#print("Precision score is ", precision_score(y_train,y_pred))
+#print("Accuracy score is ", accuracy_score(y_train, y_pred, normalize=True))
+[[2882  634]
+ [ 905 9579]]
+
+ 
+predictions=clf.predict(testX)
+sub_data=pd.DataFrame({'id':image_id })
+sub_data['has_cactus']=predictions
+sub_data.to_csv("submissions.csv",index=False)
